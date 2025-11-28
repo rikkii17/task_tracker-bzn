@@ -1,0 +1,441 @@
+\documentclass[12pt, a4paper]{article}
+\usepackage{amsmath, amssymb}
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhead{}
+\fancyfoot[C]{\thepage}
+\fancyfoot[R]{Task Tracker Detailed Specification}
+\usepackage{graphicx}
+\usepackage{longtable}
+\usepackage{enumerate}
+\usepackage{booktabs} % 表をきれいに
+
+\title{\textbf{Task Tracker 開発要求仕様書 (詳細版)}}
+\author{（受験者名またはプロジェクトチーム名）}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{empty} % 表紙のページ番号を非表示
+
+\newpage
+\tableofcontents
+\newpage
+
+% --- 第1章: 概要 (Introduction) -----------------------------------------------------------------------------------
+\section{概要 (Introduction)}
+本ドキュメントは、コーディング試験課題「Task Tracker」の開発に必要な、すべての機能、技術、デプロイ要件を詳細に定義する。
+
+\subsection{目的 (Objective)}
+本課題は、\textbf{React (TypeScript)} と \textbf{NestJS} を核としたモダンな Web アプリケーションの構築スキル、すなわち、フロントエンド、バックエンド、データベース、およびデプロイの一連のプロセスを理解し、実践する能力を検証することを目的とする。
+
+\subsection{アプリケーション概要 (Application Overview)}
+本アプリケーションは、ログイン認証を備えたシンプルなシングルユーザー向けタスク管理ツールである。ユーザーは、自身のタスクを安全に管理（登録、編集、削除）できる。
+
+\subsection{対象読者}
+\begin{itemize}
+    \item 開発担当者（フロントエンド、バックエンド）
+    \item QA/テスト担当者
+    \item 評価担当者
+\end{itemize}
+
+
+% --- 第2章: 機能要求 (Functional Requirements) -----------------------------------------------------------------------------------
+\section{機能要求 (Functional Requirements)}
+
+\subsection{ユーザー管理機能 (User Management)}
+\begin{enumerate}
+    \item \textbf{サインアップ (Sign Up):}
+    \begin{itemize}
+        \item ユーザー名（またはメールアドレス）とパスワードの登録。
+        \item パスワードは必ずハッシュ化して保存すること。
+    \end{itemize}
+    \item \textbf{ログイン (Log In):}
+    \begin{itemize}
+        \item ユーザー名（またはメールアドレス）とパスワードによる認証。
+        \item 認証成功後、クライアント側へ \textbf{JWT} を発行する。
+    \end{itemize}
+\end{enumerate}
+
+\subsection{タスクエンティティ (Task Entity)}
+タスクは以下の必須フィールドを持つ。
+
+\begin{longtable}{|p{3cm}|p{3cm}|p{6cm}|}
+\hline
+\textbf{フィールド名} & \textbf{データ型} & \textbf{説明} \\
+\hline
+\hline
+\texttt{id} & Integer & 主キー（自動採番） \\
+\hline
+\texttt{title} & String (Required) & タスクの概要（例: 企画書作成） \\
+\hline
+\texttt{details} & String (Optional) & タスクの詳細な説明 \\
+\hline
+\texttt{status} & Enum (Required) & タスクの現在の状態。後述の3種類のみを許容する。 \\
+\hline
+\texttt{userId} & Integer & タスクの所有者であるユーザーID（外部キー） \\
+\hline
+\texttt{createdAt} & DateTime & 作成日時（自動設定） \\
+\hline
+\texttt{updatedAt} & DateTime & 最終更新日時（自動更新） \\
+\hline
+\end{longtable}
+
+\subsection{タスク管理機能詳細 (Task Management Details)}
+\begin{enumerate}[(a)]
+    \item \textbf{タスク一覧表示:}
+    \begin{itemize}
+        \item ログイン中のユーザーが所有するすべてのタスクを表示する。
+        \item （推奨）最新の更新日時順などでソートして表示する。
+    \end{itemize}
+    \item \textbf{タスク新規登録:}
+    \begin{itemize}
+        \item \texttt{title} は必須。
+        \item 初期 \texttt{status} は `TODO` とする。
+        \item 登録時、認証情報に基づき \texttt{userId} を自動で紐づける。
+    \end{itemize}
+    \item \textbf{タスク編集:}
+    \begin{itemize}
+        \item \texttt{title}, \texttt{details}, \texttt{status} の全てまたは一部を更新可能。
+        \item \texttt{userId} は変更不可。
+    \end{itemize}
+    \item \textbf{タスク削除:}
+    \begin{itemize}
+        \item 指定されたタスクを完全に削除する。
+    \end{itemize}
+\end{enumerate}
+
+\subsubsection{タスクステータス (Task Status)}
+ステータスはプルダウンで選択可能とし、以下の3種類に限定する。
+
+\begin{itemize}
+    \item \textbf{TODO}: 未着手
+    \item \textbf{DOING}: 進行中
+    \item \textbf{DONE}: 完了
+\end{itemize}
+
+\subsection{制約事項 (Constraints)}
+\begin{itemize}
+    \item \textbf{認証必須:} タスク管理に関する全てのエンドポイントは、有効な JWT による認証を必須とする。
+    \item \textbf{所有権チェック:} タスクの取得、編集、削除を行う際、リクエストを発行したユーザーIDとタスクの \texttt{userId} が一致することをバックエンドで厳密に検証すること。
+\end{itemize}
+
+
+% --- 第3章: 技術仕様と構成 (Technical Specifications & Architecture) -----------------------------------------------------------------------------------
+\section{技術仕様と構成 (Technical Specifications \& Architecture)}
+
+\subsection{技術スタック (Technology Stack)}
+\begin{longtable}{|p{4cm}|p{7cm}|}
+\hline
+\textbf{カテゴリ} & \textbf{技術} \\
+\hline
+\hline
+フロントエンド (Client) & React, TypeScript, Tailwind CSS (推奨), Axios \\
+\hline
+バックエンド (Server) & NestJS, TypeScript \\
+\hline
+データベース (DB) & PostgreSQL (Supabase) \\
+\hline
+ORM & Prisma (推奨) or TypeORM \\
+\hline
+認証方式 & JWT (JSON Web Token) \\
+\hline
+\end{longtable}
+
+\subsection{ディレクトリ構成 (Directory Structure)}
+モノレポ構成を採用し、フロントエンドとバックエンドを明確に分離する。
+
+\begin{verbatim}
+root/
+├── client/            # React + TypeScript (フロントエンド)
+│   ├── src/
+│   │   ├── pages/
+│   │   ├── components/
+│   │   ├── api/           # APIクライアント、フックなど
+│   │   └── types/         # 共有型定義
+│   └── ...
+├── server/            # NestJS + TypeScript (バックエンド)
+│   ├── src/
+│   │   ├── auth/          # 認証モジュール (JWT, Strategy)
+│   │   ├── users/         # ユーザーモジュール
+│   │   ├── tasks/         # タスクモジュール
+│   │   └── main.ts
+│   └── prisma/            # Prismaスキーマファイル
+├── README.md
+└── .env.example
+\end{verbatim}
+
+\subsection{認証フロー (JWT Authentication Flow)}
+\begin{enumerate}
+    \item \textbf{ログイン:}
+    \begin{itemize}
+        \item クライアントは `/auth/login` に認証情報を送信。
+        \item サーバーは認証後、JWT (Access Token) を生成し、レスポンスボディでクライアントに返す。
+    \end{itemize}
+    \item \textbf{タスク操作:}
+    \begin{itemize}
+        \item クライアントはタスク関連の API をコールする際、\textbf{HTTP \texttt{Authorization} ヘッダー}に `Bearer <JWT>` を含める。
+        \item サーバー (NestJS) は \textbf{Guard} を利用して JWT を検証し、トークン内のペイロード (\texttt{userId} など) をリクエストオブジェクトに挿入する。
+    \end{itemize}
+    \item \textbf{認可 (Authorization):}
+    \begin{itemize}
+        \item タスク関連のサービス層で、リクエストから取得した \texttt{userId} と操作対象のタスクの \texttt{userId} を比較し、アクセス権限をチェックする。
+    \end{itemize}
+\end{enumerate}
+
+
+% --- 第4章: 詳細API仕様とデータ定義 (Detailed API Specification & Data Definition) -----------------------------------------------------------------------------------
+\section{詳細API仕様とデータ定義 (Detailed API Specification \& Data Definition)}
+
+\subsection{データ構造の型定義 (TypeScript Type Definitions)}
+\subsubsection{タスクステータス}
+\begin{verbatim}
+// client/src/types/task.ts
+export type TaskStatus = 'TODO' | 'DOING' | 'DONE';
+\end{verbatim}
+
+\subsubsection{ユーザーとタスクのインターフェース}
+\begin{verbatim}
+// client/src/types/task.ts
+export interface Task {
+  id: number;
+  title: string;
+  details: string | null;
+  status: TaskStatus;
+  userId: number;
+  createdAt: string; // ISO Date String
+  updatedAt: string; // ISO Date String
+}
+
+// client/src/types/user.ts
+export interface User {
+  id: number;
+  email: string;
+}
+\end{verbatim}
+
+\subsection{認証系API仕様 (Authentication APIs)}
+\subsubsection{\texttt{POST /auth/signup} (サインアップ)}
+\begin{itemize}
+    \item \textbf{リクエストボディ:}
+    \begin{verbatim}
+{
+  "email": "user@example.com",
+  "password": "strongpassword123"
+}
+    \end{verbatim}
+    \item \textbf{レスポンス (\texttt{201 Created}):}
+    \begin{verbatim}
+{
+  "message": "User registered successfully"
+}
+    \end{verbatim}
+\end{itemize}
+
+\subsubsection{\texttt{POST /auth/login} (ログイン)}
+\begin{itemize}
+    \item \textbf{リクエストボディ:} (サインアップと同じ)
+    \item \textbf{レスポンス (\texttt{200 OK}):}
+    \begin{verbatim}
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." // JWT
+}
+    \end{verbatim}
+\end{itemize}
+
+\subsection{タスク管理API仕様 (Task Management APIs)}
+（\textbf{注意:} 以下の全てのAPIは \texttt{Authorization: Bearer <JWT>} ヘッダーを必須とする。）
+
+\subsubsection{\texttt{GET /tasks} (タスク一覧取得)}
+\begin{itemize}
+    \item \textbf{リクエストボディ:} なし
+    \item \textbf{レスポンス (\texttt{200 OK}):}
+    \begin{verbatim}
+[
+  { "id": 1, "title": "企画書作成", "status": "DOING", ... },
+  { "id": 2, "title": "環境構築", "status": "DONE", ... }
+]
+    \end{verbatim}
+\end{itemize}
+
+\subsubsection{\texttt{POST /tasks} (タスク新規登録)}
+\begin{itemize}
+    \item \textbf{リクエストボディ:}
+    \begin{verbatim}
+{
+  "title": "新しいタスクのアイデア出し",
+  "details": "次のプロジェクトの初期アイデアをブレストする。"
+}
+    \end{verbatim}
+    \item \textbf{レスポンス (\texttt{201 Created}):} (作成されたタスクオブジェクト全体)
+    \begin{verbatim}
+{
+  "id": 3,
+  "title": "新しいタスクのアイデア出し",
+  "details": "次のプロジェクトの初期アイデアをブレストする。",
+  "status": "TODO",
+  "userId": 1,
+  "createdAt": "...",
+  "updatedAt": "..."
+}
+    \end{verbatim}
+\end{itemize}
+
+\subsubsection{\texttt{PATCH /tasks/:id} (タスク編集)}
+\begin{itemize}
+    \item \textbf{リクエストボディ:} (更新したいフィールドのみ)
+    \begin{verbatim}
+{
+  "status": "DONE"
+}
+    \end{verbatim}
+    \item \textbf{レスポンス (\texttt{200 OK}):} (更新後のタスクオブジェクト全体)
+\end{itemize}
+
+\subsubsection{\texttt{DELETE /tasks/:id} (タスク削除)}
+\begin{itemize}
+    \item \textbf{リクエストボディ:} なし
+    \item \textbf{レスポンス (\texttt{200 OK}):}
+    \begin{verbatim}
+{
+  "message": "Task deleted successfully"
+}
+    \end{verbatim}
+\end{itemize}
+
+\subsection{DBスキーマ設計 (Prisma Schema Example)}
+Prisma を使用する場合のスキーマ定義例を示す。
+
+\begin{verbatim}
+// server/prisma/schema.prisma
+
+enum TaskStatus {
+  TODO
+  DOING
+  DONE
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String   // Hashed password
+  tasks     Task[]   // Relation to Task model
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Task {
+  id        Int        @id @default(autoincrement())
+  title     String
+  details   String?
+  status    TaskStatus @default(TODO)
+  
+  // Relation
+  userId    Int
+  user      User       @relation(fields: [userId], references: [id])
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([userId])
+}
+\end{verbatim}
+
+
+% --- 第5章: デプロイ要件 (Deployment Requirements) -----------------------------------------------------------------------------------
+\section{デプロイ要件 (Deployment Requirements)}
+
+\subsection{デプロイ構成}
+\begin{longtable}{|p{3cm}|p{3cm}|p{6cm}|}
+\toprule
+\textbf{対象} & \textbf{推奨サービス} & \textbf{補足} \\
+\midrule
+フロントエンド (Client) & Vercel & React アプリケーションのビルドと自動デプロイ。 \\
+\midrule
+バックエンド (Server) & Render & NestJS アプリケーションの起動。環境変数によるDB接続。 \\
+\midrule
+データベース (DB) & Supabase & PostgreSQL サービスを利用し、接続情報をバックエンドへ提供。 \\
+\bottomrule
+\end{longtable}
+
+\subsection{環境変数 (.env.example)}
+\begin{itemize}
+    \item \textbf{定義の義務:} 必要な環境変数は全て `.env.example` に明示すること。
+    \item \textbf{必須変数:}
+    \begin{verbatim}
+# --- DB 接続情報 (Supabase/PostgreSQL) ---
+DATABASE_URL="postgresql://[USER]:[PASSWORD]@[HOST]:[PORT]/[DATABASE_NAME]?schema=public"
+
+# --- 認証シークレット (NestJS JWT) ---
+JWT_SECRET="[YOUR_STRONG_SECRET_KEY]"
+
+# --- CORS 許可オリジン (任意: Render/Vercel URL) ---
+CLIENT_URL="https://[VERCEL_DEPLOY_URL]"
+    \end{verbatim}
+\end{itemize}
+
+\subsection{提出要件 (Submission Requirements)}
+\begin{itemize}
+    \item \textbf{リポジトリ:} GitHub Public リポジトリ。
+    \item \textbf{README.md 記載内容:}
+    \begin{enumerate}
+        \item セットアップ手順 (ローカル環境での依存関係インストール、DB接続、起動方法など)
+        \item 使用技術一覧
+        \item \textbf{デプロイURL} (フロントエンドと API の両方)
+        \item アプリケーションの簡単な説明 (アプリ概要、機能ハイライト)
+        \item API仕様書 (本仕様書の第4章をさらに詳細化したもの)
+    \end{enumerate}
+\end{itemize}
+
+
+% --- 第6章: 評価観点 (Evaluation Criteria) -----------------------------------------------------------------------------------
+\section{評価観点 (Evaluation Criteria)}
+
+\subsection{評価基準詳細}
+\begin{longtable}{|p{3cm}|p{9cm}|}
+\toprule
+\textbf{項目} & \textbf{見たいポイント (詳細)} \\
+\midrule
+\textbf{設計力} & \begin{itemize}
+    \item 型定義 (\texttt{interface}, \texttt{type}) がデータ構造やAPIの入出力を正確に反映しているか。
+    \item NestJS/React のモジュール分割、コンポーネント化、責務分離が適切に設計されているか。
+    \item フロントエンドとバックエンドで型定義が共有、整合性が保たれているか。
+\end{itemize} \\
+\midrule
+\textbf{実装力} & \begin{itemize}
+    \item 全ての要求機能（CRUD、ステータス更新、認証）が仕様通りに正しく動作するか。
+    \item DB接続、JWT認証、認可（所有権チェック）のロジックが確実に機能しているか。
+\end{itemize} \\
+\midrule
+\textbf{コード品質} & \begin{itemize}
+    \item 変数、関数、クラス名の命名規則が一貫し、可読性が高いか。
+    \item 複雑なロジックや非自明な箇所に適切なコメントが付与されているか。
+    \item エラーハンドリング（特に認証失敗、存在しないタスクへのアクセスなど）が適切に行われているか。
+\end{itemize} \\
+\midrule
+\textbf{UI} & \begin{itemize}
+    \item ログイン、タスク一覧、タスク登録・編集の画面が最低限使いやすいデザインか。
+    \item モバイルフレンドリーなレスポンシブ対応がされているか。（推奨）
+    \item インタラクション（ボタンのクリック、プルダウン操作など）が直感的か。
+\end{itemize} \\
+\midrule
+\textbf{デプロイ} & \begin{itemize}
+    \item Vercel および Render 上でアプリケーションが安定して動作しているか。
+    \item \textbf{README.md に記載されたURL} からアクセスし、正常に機能が確認できるか。
+\end{itemize} \\
+\bottomrule
+\end{longtable}
+
+\section{付録: リポジトリ構成例 (Appendix: Repository Structure)}
+\begin{verbatim}
+root/
+├── client/            # React (Vercel デプロイ対象)
+├── server/            # NestJS (Render デプロイ対象)
+├── README.md
+└── .env.example
+\end{verbatim}
+
+\end{document}

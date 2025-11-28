@@ -1,0 +1,145 @@
+\documentclass[11pt, a4paper, jf]{jarticle} % jarticleを使用し、日本語組版環境に依存
+
+% --- 日本語環境安定化のための最小限のパッケージ ---
+% otf, uprefなど環境依存性の高いパッケージを削除
+
+\usepackage{amsmath} % 数式用
+\usepackage{amssymb} % \squareや\checkmarkを使うために必要
+
+% ジオメトリ設定はそのまま
+\usepackage[a4paper, top=2.5cm, bottom=2.5cm, left=2cm, right=2cm]{geometry} 
+
+\usepackage{enumitem}
+
+% リストの行頭にチェックボックス記号を配置 (数式モードを維持)
+% jarticle環境ではjfオプションによりフォントは自動で処理されます
+\setlist[itemize]{label={$\square$}, leftmargin=*}
+% --- END 最小限のパッケージ ---
+
+\title{\textbf{Task Tracker 7日間開発計画：詳細チェックリスト}}
+\author{（開発者名またはプロジェクトチーム名）}
+\date{2025年11月}
+
+\begin{document}
+\maketitle
+\thispagestyle{empty} % 1ページ目のページ番号を非表示
+
+\section*{はじめに}
+本チェックリストは、提供された「Task Tracker 開発要求仕様書」に基づき、React/NestJS/Prisma/JWT を使用したアプリケーションを7日間（1週間）で完成させるための実行計画である。
+
+\vspace{0.5cm}
+
+\textbf{目標技術スタック:}
+\begin{itemize}
+    \item フロントエンド: React, TypeScript, Tailwind CSS
+    \item バックエンド: NestJS, TypeScript, JWT (認証)
+    \item データベース: PostgreSQL (Supabase), Prisma (ORM)
+\end{itemize}
+
+
+\section{一日目：環境構築とDB設計（バックエンドの準備）}
+
+\textbf{目標：モノレポのセットアップとデータ構造の確立}
+
+\begin{itemize}
+    \item モノレポ構造の作成（\texttt{root/}、\texttt{client/}、\texttt{server/} ディレクトリ）。
+    \item Gitリポジトリの初期化と基本ファイルのコミット。
+    \item NestJS (\texttt{server/}) プロジェクトの初期設定（Prisma含む）。
+    \item SupabaseでPostgreSQLデータベースを作成し、接続情報を取得。
+    \item Prismaスキーマ（\texttt{User}、\texttt{Task} モデル、\texttt{TaskStatus} Enum）を仕様書通りに定義。
+    \item Prismaマイグレーションを実行し、DBにテーブルを反映（\texttt{npx prisma migrate dev}）。
+\end{itemize}
+
+\section{二日目：バックエンド認証機能の実装}
+
+\textbf{目標：ユーザー登録、ログイン、JWT認証フローの確立}
+
+\begin{itemize}
+    \item \texttt{AuthModule} と \texttt{UsersModule} を作成。
+    \item JWT Strategy、Passport Guard のセットアップ。
+    \item サインアップ (\texttt{POST /auth/signup}) エンドポイントの実装。
+    \begin{itemize}
+        \item パスワードのハッシュ化（\texttt{bcrypt}など）を必須とする。
+    \end{itemize}
+    \item ログイン (\texttt{POST /auth/login}) エンドポイントの実装。
+    \begin{itemize}
+        \item パスワード検証とJWT（アクセストークン）の生成。
+        \item レスポンスボディでトークンをクライアントに返す。
+    \end{itemize}
+    \item \texttt{AuthGuard} を適用したエンドポイントを仮作成し、認証が機能することを確認。
+\end{itemize}
+
+\section{三日目：バックエンド タスクCRUD（一覧・作成）}
+
+\textbf{目標：タスク管理の核となるエンドポイントの実装}
+
+\begin{itemize}
+    \item \texttt{TasksModule} を作成し、\texttt{AuthGuard} を適用。
+    \item タスク新規登録 (\texttt{POST /tasks}) エンドポイントの実装。
+    \begin{itemize}
+        \item \texttt{title} が必須であることを検証。
+        \item 認証情報から \texttt{userId} を自動で紐づけるロジックを実装。
+        \item 初期 \texttt{status} を \texttt{TODO} に設定。
+    \end{itemize}
+    \item タスク一覧取得 (\texttt{GET /tasks}) エンドポイントの実装。
+    \begin{itemize}
+        \item ログイン中のユーザーが所有するタスクのみをフィルタリング。
+        \item 更新日時順などでソートして返す（推奨）。
+    \end{itemize}
+\end{itemize}
+
+\section{四日目：バックエンド タスクCRUD（編集・削除）と認可}
+
+\textbf{目標：タスクの編集・削除と所有権チェック（認可）の完了}
+
+\begin{itemize}
+    \item タスク編集 (\texttt{PATCH /tasks/:id}) エンドポイントの実装。
+    \item タスク削除 (\texttt{DELETE /tasks/:id}) エンドポイントの実装。
+    \item \textbf{所有権チェック（認可）} ロジックの徹底実装。
+    \begin{itemize}
+        \item 取得、編集、削除の全てのエンドポイントで、リクエストユーザーIDとタスクの\texttt{userId}の一致を厳密に検証。
+    \end{itemize}
+    \item バックエンド全体のロジックとAPI仕様（第4章）の最終チェック。
+\end{itemize}
+
+\section{五日目：フロントエンド環境構築と認証UI/UX}
+
+\textbf{目標：React環境のセットアップと認証画面の完成}
+
+\begin{itemize}
+    \item React (\texttt{client/}) プロジェクトの初期設定 (TypeScript)。
+    \item Tailwind CSS の設定と基本レイアウトの作成。
+    \item 共有型定義 (\texttt{Task}、\texttt{TaskStatus}) を \texttt{client/src/types/} に定義。
+    \item 認証画面（サインアップ、ログイン）のUI/UX実装。
+    \item \texttt{Axios} を使用した BE認証APIへの接続ロジックを実装。
+    \item ログイン成功後、JWT（アクセストークン）を保持し、認証状態を管理するContext/Hookを作成。
+\end{itemize}
+
+\section{六日目：フロントエンド タスクCRUD UIの実装}
+
+\textbf{目標：タスク管理のメインUIと操作ロジックの完成}
+
+\begin{itemize}
+    \item 認証後のメイン画面（タスク一覧）のレイアウトとコンポーネントを作成。
+    \item \texttt{GET /tasks} をコールし、取得したタスク一覧を表示するロジックを実装。
+    \item タスク新規登録モーダル/フォームの実装（\texttt{POST /tasks}）。
+    \item タスクの編集機能の実装（タイトル、詳細、ステータスの更新、\texttt{PATCH /tasks/:id}）。
+    \item タスク削除機能の実装と確認モーダル。
+    \item \textbf{モバイルフレンドリーなレスポンシブ対応}を完了。
+\end{itemize}
+
+\section{七日目：統合、デプロイ、提出準備}
+
+\textbf{目標：最終動作確認、デプロイ、提出要件の完了}
+
+\begin{itemize}
+    \item フロントエンドとバックエンドの統合テスト（サインアップからCRUDまで）。
+    \item \textbf{Render} への NestJS API のデプロイと環境変数の設定。
+    \item \textbf{Vercel} への React アプリケーションのデプロイと環境変数の設定。
+    \item エラーハンドリング（認証失敗、タスク未検出など）の最終チェックと改善。
+    \item \texttt{README.md} の作成/更新（セットアップ手順、使用技術一覧、デプロイURL、API仕様書）。
+    \item GitHub Public リポジトリの確認と最終コミット。
+    \item 評価観点（設計力、実装力、コード品質、UI）に沿ったセルフレビュー。
+\end{itemize}
+
+\end{document}
